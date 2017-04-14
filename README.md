@@ -1,32 +1,32 @@
-####Use InputFW permission check
+####Use InputFW permission check   
 ___
-#####Installation
-1. add dependency on the latest version of InputFW library
+#####Installation   
+1. add dependency on the latest version of InputFW library   
 ```xml
 <dependency>
   <groupId>com.worksap.company</groupId>
   <artifactId>hue-application-input-framework</artifactId>
 </dependency>
 ```
-2. import InputFW's config;
+2. import InputFW's config;   
 ```
  com.worksap.company.framework.inputfw.config.InputFrameworkConfig
 ```
-or only the permission related config:
+or only the permission related config:   
 ```
 com.worksap.company.framework.inputfw.permission.PermissionConfig
 ```
-#####Usage
-_you need only care:_
+#####Usage   
+_you need only care:_   
  * `PermissionService`
  * `Permission`
  * `@RequiresPermission`
  * `@CheckPermission` 
 
-all the 4 files are in package `com.worksap.company.framework.inputfw.permission`
+all the 4 files are in package `com.worksap.company.framework.inputfw.permission`   
 
-######`Permission`
-**This interface declares all the permission constants**
+######`Permission`   
+**This interface declares all the permission constants**   
 
 we recommend you extends `com.worksap.company.framework.inputfw.permission.Permission` and make your own PermissionConstants.  
 
@@ -53,8 +53,8 @@ public interface Permission {
     }
 }
 ```
-######`PermissionService`
-**Implement this service to check permissions.**   
+######`PermissionService`   
+**Implement this service to check permissions.**      
 
 If you define your own permission set and permissions, you must implement this interface to check the  
 permissions you defined. Otherwise, those permissions may not be checked.
@@ -138,14 +138,14 @@ public class AcExpensePermissionServiceImpl implements PermissionService {
     }
 }
 ```
-######`@RequiresPermission`
+######`@RequiresPermission`   
 **Add this annotation on any method(include `abstract`, `default` or `concrete`/`implementation` methods) to declare which permissions are needed to  
-call this method**
+call this method**   
 `@RequiresPermission` has 4 properties:
-* `value`: same as `permssions`
-* `permissions`: permissions needed to call this method.
+* `value`: same as `permssions`   
+* `permissions`: permissions needed to call this method.   
 * `callSuper`: whether to include the permissions declared on `overridden` methods, `true` in default. e.g. in the code below, all  
- of `Permission.Application.DOWNLOAD`, `Permission.InputFramework.APPROVER` and `Permission.InputFramework.OWNER` are to be checked.
+ of `Permission.Application.DOWNLOAD`, `Permission.InputFramework.APPROVER` and `Permission.InputFramework.OWNER` are to be checked.   
 * `target`: the target, `"2"` means the third parameter, `"2.text"` means the `text` property of the third parameter, `"2.aaa.bbb..."`
 
 ```java
@@ -168,15 +168,15 @@ public class ApplicationReportController implements DownloadController {
 ```
 
 for the code above, if the `downloadPdf` method is called with parameter `applicationId="appIdxxx"` and this application is an _Ac-Expense_ application,  
-then the permission checking result should be:
+then the permission checking result should be:   
 ```java
 String methodName = "package.ApplicationReportController.downloadPdf";
 AcExpensePermissionServiceImpl.hasPermission("appIdxxx", userId, {"Downlaod"}, methodName, args)
     ||InputFwPermissionServiceImpl.hasPermission("appIdxxx", userId, {"Approver", "Owner"}, methodName, args)
 ```
-######`@CheckPermission`
-**Add this annotation on any class to activate permission check, permission will not be checked otherwise**
-So, adding this annotation on `interface`, `enum`, `@interface` will have no effect
+######`@CheckPermission`   
+**Add this annotation on any class to activate permission check, permission will not be checked otherwise**   
+So, adding this annotation on `interface`, `enum`, `@interface` will have no effect   
 
 ```java
 @CheckPermission
@@ -184,7 +184,7 @@ public class ApplicationReportController implements DownloadController {
     //...
 }
 ```
-####Default Permission Control in InputFW
+####Default Permission Control in InputFW    
 | Operation         | Permitted User  | Class                         |
 | ----------------- | --------------- |: ---------------------------- |
 | `start`           | x               | `StartApplicationPageSupport` |
