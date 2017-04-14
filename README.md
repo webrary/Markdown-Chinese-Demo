@@ -1,77 +1,203 @@
-针对中文,演示Markdown的各种语法
-  
-大标题
-===================================
-  大标题一般显示工程名,类似html的\<h1\><br />
-  你只要在标题下面跟上=====即可
+####Use InputFW permission check
+___
+#####Installation
+1. add dependency on the latest version of InputFW library
+```xml
+<dependency>
+  <groupId>com.worksap.company</groupId>
+  <artifactId>hue-application-input-framework</artifactId>
+</dependency>
+```
+2. import InputFW's config;
+```
+ com.worksap.company.framework.inputfw.config.InputFrameworkConfig
+```
+or only the permission related config:
+```
+com.worksap.company.framework.inputfw.permission.PermissionConfig
+```
+#####Usage
+_you need only care:_
+ * `PermissionService`
+ * `Permission`
+ * `@RequiresPermission`
+ * `@CheckPermission` 
 
-  
-中标题
------------------------------------
-  中标题一般显示重点项,类似html的\<h2\><br />
-  你只要在标题下面输入------即可
-  
-### 小标题
-  小标题类似html的\<h3\><br />
-  小标题的格式如下 ### 小标题<br />
-  注意#和标题字符中间要有空格
+all the 4 files are in package `com.worksap.company.framework.inputfw.permission`
 
-### 注意!!!下面所有语法的提示我都先用小标题提醒了!!! 
+######`Permission`
+**This interface declares all the permission constants**
 
-### 单行文本框
-    这是一个单行的文本框,只要两个Tab再输入文字即可
-        
-### 多行文本框  
-    这是一个有多行的文本框
-    你可以写入代码等,每行文字只要输入两个Tab再输入文字即可
-    这里你可以输入一段代码
+we recommend you extends `com.worksap.company.framework.inputfw.permission.Permission` and make your own PermissionConstants.  
 
-### 比如我们可以在多行文本框里输入一段代码,来一个Java版本的HelloWorld吧
-    public class HelloWorld {
+* Normally all the permission constants should consist of two parts(_PermissionSetName_ and _PermissionName_) and be in the form of   
+ **_`PermissionSetName.PermissionName`_**, e.g. the `Permission.InputFramework.OWNER`(value is `"InputFramework.Owner"`) in the code below.  
+ This kind of permissions are checked by the `PermssionService`-Impl corresponding to the _PermissionSetName_. e.g. permission `"InputFramework.Owner"`  
+ is checked by a `PermissionService`-Impl whose `getPermissionSet()` method returns `"InputFramework"`.
+ 
+* But there is also another kind of permission constants named __, which has no `PermissionSetName`, e.g. the `Permission.Application.DOWNLOAD` in the  
+ code below.  
+ This kind of permissions are checked by the `PermssionService`-Impl corresponding to the `ServiceDefId` to which the checked _Application_ belongs.  
+ e.g. when downloading report of _ApplicationXXX_, and _ApplicationXXX_'s `ServiceDefId` is _ServiceDefIdYYY_. Permission `"Download"` will be  
+ checked by a `PermissionService`-Impl whose `getServiceDefIds()`'s result contains _ServiceDefIdYYY_.
 
-      /**
-      * @param args
-	    */
-	    public static void main(String[] args) {
-		    System.out.println("HelloWorld!");
-
-	    }
-
+```java
+public interface Permission {
+    interface InputFramework {
+        String PERMISSION_SET = "InputFramework";
+        String APPROVER = PERMISSION_SET + ".Approver"; //InputFramework.Approver
+        String OWNER = PERMISSION_SET + ".Owner"; //InputFramework.Owner
     }
-### 链接
-1.[点击这里你可以链接到www.google.com](http://www.google.com)<br />
-2.[点击这里我你可以链接到我的博客](http://guoyunsky.iteye.com)<br />
+    interface Application{
+        String DOWNLOAD = "Download"; // has no `PermissionSetName`
+    }
+}
+```
+######`PermissionService`
+**Implement this service to check permissions.**   
 
-###只是显示图片
-![github](http://github.com/unicorn.png "github")
+If you define your own permission set and permissions, you must implement this interface to check the  
+permissions you defined. Otherwise, those permissions may not be checked.
 
-###想点击某个图片进入一个网页,比如我想点击github的icorn然后再进入www.github.com
-[![image]](http://www.github.com/)
-[image]: http://github.com/github.png "github"
+If you define permissions which have no _PermissionSetName_, you have to check it by yourself in this `PermssionService`-impl, or you may need to ask  
+other products to check at the same time in some cases.
 
-### 文字被些字符包围
-> 文字被些字符包围
->
-> 只要再文字前面加上>空格即可
->
-> 如果你要换行的话,新起一行,输入>空格即可,后面不接文字
-> 但> 只能放在行首才有效
+```java
+public interface PermissionService extends Service {
+    /**
+     * get the `PermissionSetName` of the permission set which will be checked by this `PermissionService`
+     *
+     * @return the `PermissionSetName`
+     */
+    String getPermissionSet();
 
-### 文字被些字符包围,多重包围
-> 文字被些字符包围开始
->
-> > 只要再文字前面加上>空格即可
->
->  > > 如果你要换行的话,新起一行,输入>空格即可,后面不接文字
->
-> > > > 但> 只能放在行首才有效
+    /**
+     * @return Collection of `ServiceDefId`
+     */
+    Collection<ServiceDefId> getServiceDefIds();
 
-### 特殊字符处理
-有一些特殊字符如<,#等,只要在特殊字符前面加上转义字符\即可<br />
-你想换行的话其实可以直接用html标签\<br /\>
+    /**
+     * check whether user with `userId` has `permissions` on `target` to call method `methodName`
+     *
+     * @param permissions the required permissions to call method `methodName`, the `PermissionSetName` are not contained.
+     * @param args args passed when call method `methodName`
+     * @return <code>true</code> if has the required permissions.
+     */
+    boolean hasPermission(Object target, UserId userId, Collection<String> permissions, String methodName, Object... args);
+}
 
-
-
-* 在行首加点
-行首输入*，空格后输入内容即可
+@Slf4j
+public class InputFwPermissionServiceImpl implements PermissionService {
+    @Override
+    public String getPermissionSet() {
+        return Permission.InputFramework.PERMISSION_SET;
+    }
     
+    @Override
+    public Collection<ServiceDefId> getServiceDefIds() {
+        return Collections.singleton();
+    }
+
+    @Override
+    public boolean hasPermission(Object target, UserId userId, Collection<String> permissions, String methodName, Object... args) {
+        log.info("user[{}] is now requiring permissions[{}.{}] to access application[{}] from method[{}]",
+                userId, this.getPermissionSet(), permissions, target, methodName
+        );
+        return true;
+    }
+}
+
+@Slf4j
+@RequiredArgsConstructor(onConstructor = @__(@Autowired))
+public class AcExpensePermissionServiceImpl implements PermissionService {
+    private final ReportAccessSecurityResolver reportSecurityResolver;
+    private final ApplicationService<ApplicationContents> applicationService;
+    private final UserContext userContext;
+
+    public String getPermissionSet() {
+        return Permission.PERMISSION_SET;
+    }
+
+    @Override
+    public Collection<ServiceDefId> getServiceDefIds() {
+        return Arrays.stream(ExpenseServiceDefId.values()).map(ExpenseServiceDefId::toDefId).collect(Collectors.toSet());
+    }
+
+    public boolean hasPermission(Object target, UserId userId, Collection<String> permissions, String methodName, Object... args) {
+        log.info("user[{}] is now requiring permissions[{}.{}] to access application[{}] from method[{}]",
+                userId, this.getPermissionSet(), permissions, target, methodName
+        );
+        if (permissions.contains(Permission.Application.DOWNLOAD)) {
+            UserContextVo contextVo = UserContextVo.valueOf(userContext);
+            Application application = applicationService.get(contextVo,
+                    ApplicationId.valueOf(String.valueOf(target)), ApplicationPurpose.INSTA_REPORT);
+            ReportAccessSecurity security = reportSecurityResolver.resolve(application.getServiceId());
+            security.checkSecurity(application.getServiceId(), userContext.getUser(), application);
+        }
+        return true;
+    }
+}
+```
+######`@RequiresPermission`
+**Add this annotation on any method(include `abstract`, `default` or `concrete`/`implementation` methods) to declare which permissions are needed to  
+call this method**
+`@RequiresPermission` has 4 properties:
+* `value`: same as `permssions`
+* `permissions`: permissions needed to call this method.
+* `callSuper`: whether to include the permissions declared on `overridden` methods, `true` in default. e.g. in the code below, all  
+ of `Permission.Application.DOWNLOAD`, `Permission.InputFramework.APPROVER` and `Permission.InputFramework.OWNER` are to be checked.
+* `target`: the target, `"2"` means the third parameter, `"2.text"` means the `text` property of the third parameter, `"2.aaa.bbb..."`
+
+```java
+public interface DownloadController extends Controller{
+    @RequiresPermission(value = { 
+            Permission.Application.DOWNLOAD }, target = "2")
+    JasperResponse downloadPdf(String featureName, String reportXmlName, String applicationId, String serviceId);    
+}
+
+@CheckPermission
+public class ApplicationReportController implements DownloadController {
+    @RequiresPermission(value = {
+            Permission.InputFramework.APPROVER,
+            Permission.InputFramework.OWNER}, target = "2", callSuper = true)
+    public JasperResponse downloadPdf(@RequestParam String featureName, @RequestParam String reportXmlName,
+            @RequestParam String applicationId, @RequestParam String serviceId) {
+        //...
+    }
+}
+```
+
+for the code above, if the `downloadPdf` method is called with parameter `applicationId="appIdxxx"` and this application is an _Ac-Expense_ application,  
+then the permission checking result should be:
+```java
+String methodName = "package.ApplicationReportController.downloadPdf";
+AcExpensePermissionServiceImpl.hasPermission("appIdxxx", userId, {"Downlaod"}, methodName, args)
+    ||InputFwPermissionServiceImpl.hasPermission("appIdxxx", userId, {"Approver", "Owner"}, methodName, args)
+```
+######`@CheckPermission`
+**Add this annotation on any class to activate permission check, permission will not be checked otherwise**
+So, adding this annotation on `interface`, `enum`, `@interface` will have no effect
+
+```java
+@CheckPermission
+public class ApplicationReportController implements DownloadController {
+    //...
+}
+```
+####Default Permission Control in InputFW
+| Operation         | Permitted User  | Class                         |
+| ----------------- | --------------- |: ---------------------------- |
+| `start`           | x               | `StartApplicationPageSupport` |
+| `restart`         | Applicant       | `StartApplicationPageSupport` |
+| `confirm`         | x               | `InputPageSupport`            |
+| `finish`          | x               | `InputPageSupport`            |
+| `onChange`        | x               | `InputPageSupport`            |
+| `save`            | x               | `InputPageSupport`            |
+| `copy`            | Applicant       | `CopyPageSupport`             |
+| `reference`       | Applicant       | `ReferencePageSupport`        |
+| `useDraftApp`     | Applicant       | `PreparedPageSupport`         |
+| `useGeneratedApp` | Applicant       | `PreparedPageSupport`         |
+| `backHistory`     | x               | `HistoryPageSupport`          |
+| `nextHistory`     | x               | `HistoryPageSupport`          |
+| `copyHistory`     | x               | `HistoryPageSupport`          |
+| `checkHasHistory` | x               | `HistoryPageSupport`          |
